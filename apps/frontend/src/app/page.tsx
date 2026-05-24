@@ -28,8 +28,19 @@ export default async function Home() {
             data.success ? "bg-green-500" : "bg-red-500"
           }`}
         />
+        <div
+          className={`w-4 h-4 rounded-full ${
+            data.success ? "bg-red-500" : "bg-green-500"
+          }`}
+        />
+        <div
+          className={`w-4 h-4 rounded-full ${
+            data.success ? "bg-green-500" : "bg-red-500"
+          }`}
+        />
 
         <p>{data.message}</p>
+        <p>#devplaform</p>
       </div>
     </main>
   );

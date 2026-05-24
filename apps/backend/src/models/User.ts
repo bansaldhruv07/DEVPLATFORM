@@ -1,16 +1,19 @@
 import mongoose, { Schema, Document, Model } from 'mongoose';
+import bcrypt from 'bcryptjs';
 
 // TypeScript interface for User document
 export interface IUser extends Document {
   email: string;
-  password: string; // Will be hashed
+  password: string;
   name: string;
   avatar?: string;
   role: 'user' | 'admin';
-  googleId?: string; // For OAuth
+  googleId?: string;
   isEmailVerified: boolean;
   createdAt: Date;
   updatedAt: Date;
+  // Instance methods
+  comparePassword(candidatePassword: string): Promise<boolean>;
 }
 
 // Mongoose schema
@@ -67,9 +70,38 @@ const UserSchema = new Schema<IUser>(
   }
 );
 
-// Indexes for performance
-UserSchema.index({ email: 1 }); // Ascending index on email
-UserSchema.index({ googleId: 1 });
+
+// ============================================
+// MIDDLEWARE: Hash password before saving
+// ============================================
+UserSchema.pre("save", async function () {
+  // Only hash if password modified
+  if (!this.isModified("password")) {
+    return;
+  }
+
+  // Generate salt
+  const salt = await bcrypt.genSalt(10);
+
+  // Hash password
+  this.password = await bcrypt.hash(
+    this.password,
+    salt
+  );
+});
+// ============================================
+// INSTANCE METHOD: Compare passwords
+// ============================================
+UserSchema.methods.comparePassword = async function (
+  candidatePassword: string
+): Promise<boolean> {
+  try {
+    // bcrypt.compare handles the hashing internally
+    return await bcrypt.compare(candidatePassword, this.password);
+  } catch (error) {
+    return false;
+  }
+};
 
 // Create and export model
 const User: Model<IUser> = mongoose.model<IUser>('User', UserSchema);
