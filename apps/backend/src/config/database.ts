@@ -55,7 +55,6 @@ class Database {
       console.error('💥 MongoDB connection failed:', error);
       this.isConnected = false;
       // Don't throw - let app start but log the error
-      // In production, you might want to crash here
     }
   }
 
