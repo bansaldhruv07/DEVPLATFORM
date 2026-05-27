@@ -116,3 +116,14 @@ export const authAPI = {
   
   getMe: () => api.get('/users/me'),
 };
+
+export const repoAPI = {
+  analyze: (repoUrl: string) =>
+    api.post('/repos/analyze', { repoUrl }),
+
+  explainCode: (code: string, language?: string) =>
+    api.post('/repos/explain', { code, language }),
+
+  debugCode: (code: string, error: string, language?: string) =>
+    api.post('/repos/debug', { code, error, language }),
+};
