@@ -26,14 +26,37 @@ class Database {
         throw new Error('MONGODB_URI is not defined in environment variables');
       }
 
-      await mongoose.connect(mongoUri, {
-        maxPoolSize: 10, // Connection pool size
-        serverSelectionTimeoutMS: 5000, // Timeout after 5s
-        socketTimeoutMS: 45000, // Close sockets after 45s
-      });
+      try {
+        console.log('🔌 Connecting to primary MongoDB...');
+        await mongoose.connect(mongoUri, {
+          maxPoolSize: 10, // Connection pool size
+          serverSelectionTimeoutMS: 5000, // Timeout after 5s
+          socketTimeoutMS: 45000, // Close sockets after 45s
+        });
 
-      this.isConnected = true;
-      console.log('✅ MongoDB connected successfully');
+        this.isConnected = true;
+        console.log('✅ MongoDB connected successfully to primary database');
+      } catch (primaryError: any) {
+        console.error('⚠️ Primary MongoDB connection failed:', primaryError.message || primaryError);
+        
+        try {
+          console.log('🔄 Disconnecting and resetting Mongoose connection state...');
+          await mongoose.disconnect();
+        } catch (disconnectError) {
+          // ignore disconnect error
+        }
+
+        console.log('🔄 Attempting fallback to local MongoDB instance...');
+        const fallbackUri = 'mongodb://127.0.0.1:27017/devplatform';
+        await mongoose.connect(fallbackUri, {
+          maxPoolSize: 10,
+          serverSelectionTimeoutMS: 5000,
+          socketTimeoutMS: 45000,
+        });
+
+        this.isConnected = true;
+        console.log('✅ Connected successfully to local fallback MongoDB');
+      }
 
       // Handle connection events
       mongoose.connection.on('error', (err) => {
@@ -52,9 +75,9 @@ class Database {
       });
 
     } catch (error) {
-      console.error('💥 MongoDB connection failed:', error);
+      console.error('💥 MongoDB connection completely failed:', error);
       this.isConnected = false;
-      // Don't throw - let app start but log the error
+      throw error;
     }
   }
 
@@ -73,7 +96,7 @@ class Database {
   }
 
   public getConnectionStatus(): boolean {
-    return this.isConnected;
+    return mongoose.connection.readyState === 1;
   }
 }
 
