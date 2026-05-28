@@ -24,14 +24,14 @@ const features = [
     color: 'bg-purple-50 border-purple-200',
     badge: 'Live',
   },
-  {
-    icon: '📋',
-    title: 'Kanban Board',
-    description: 'Team task management with real-time collaboration',
-    href: '/dashboard/kanban',
-    color: 'bg-green-50 border-green-200',
-    badge: 'Coming Soon',
-  },
+{
+  icon: '📋',
+  title: 'Kanban Board',
+  description: 'Team task management with real-time collaboration',
+  href: '/dashboard/kanban', 
+  color: 'bg-green-50 border-green-200',
+  badge: 'Live',  
+},
   {
     icon: '📊',
     title: 'Analytics',
