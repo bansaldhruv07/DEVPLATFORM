@@ -4,6 +4,7 @@ import {
   analyzeRepository,
   explainCode,
   debugCode,
+  getJobStatus,
 } from '../controllers/repoController';
 
 const router = Router();
@@ -12,5 +13,6 @@ const router = Router();
 router.post('/analyze', authenticate, analyzeRepository);
 router.post('/explain', authenticate, explainCode);
 router.post('/debug', authenticate, debugCode);
+router.get('/job/:jobId', authenticate, getJobStatus);
 
 export default router;

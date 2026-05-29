@@ -126,4 +126,8 @@ export const repoAPI = {
 
   debugCode: (code: string, error: string, language?: string) =>
     api.post('/repos/debug', { code, error, language }),
+
+  // NEW: Poll job status
+  getJobStatus: (jobId: string) =>
+    api.get(`/repos/job/${jobId}`),
 };

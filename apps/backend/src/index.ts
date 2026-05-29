@@ -1,12 +1,20 @@
 import express, { Request, Response } from 'express';
-import { createServer } from 'http'; // ADD: Need HTTP server for Socket.io
+import { createServer } from 'http';
 import dotenv from 'dotenv';
+
 dotenv.config(); //always creates an issue...always config first before loading anything
+
 import helmet from 'helmet';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import Database from './config/database';
+import RedisClient from './config/redis';
+import logger from './config/logger';
+import { requestLogger, errorLogger } from './middleware/requestLogger';
 import { initializeSocket } from './socket/socketServer';
+
+// Import queues (initializes workers)
+import './queues/aiQueue';
 
 // Routes
 import authRoutes from './routes/authRoutes';
@@ -15,25 +23,26 @@ import repoRoutes from './routes/repoRoutes';
 import taskRoutes from './routes/taskRoutes';
 
 const app = express();
-const httpServer = createServer(app); // Wrap Express in HTTP server
+const httpServer = createServer(app);
 const PORT = process.env.PORT || 5000;
 
 // Middleware
 app.use(helmet());
-app.use(cors({
-  origin: process.env.CLIENT_URL,
-  credentials: true,
-}));
+app.use(cors({ origin: process.env.CLIENT_URL, credentials: true }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
+app.use(requestLogger); // Log all requests
 
-// Health check
+// Health check — now includes Redis status
 app.get('/health', (req: Request, res: Response) => {
   const dbStatus = Database.getConnectionStatus();
+  const redisStatus = RedisClient.getStatus();
+
   res.status(200).json({
     status: 'ok',
     database: dbStatus ? 'connected' : 'disconnected',
+    redis: redisStatus ? 'connected' : 'disconnected',
     timestamp: new Date().toISOString(),
   });
 });
@@ -43,6 +52,9 @@ app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/users', userRoutes);
 app.use('/api/v1/repos', repoRoutes);
 app.use('/api/v1/tasks', taskRoutes);
+
+// Error logger (must be AFTER routes)
+app.use(errorLogger);
 
 // 404
 app.use((req: Request, res: Response) => {
@@ -54,31 +66,34 @@ const startServer = async () => {
   try {
     await Database.connect();
 
-    // Initialize Socket.io AFTER DB connects
-    const io = initializeSocket(httpServer);
-    app.set('io', io); // Make io accessible in controllers if needed
+    // Initialize Redis
+    RedisClient.getInstance();
 
-    // Use httpServer.listen instead of app.listen
+    // Initialize Socket.io
+    const io = initializeSocket(httpServer);
+    app.set('io', io);
+
     httpServer.listen(PORT, () => {
-      console.log(`🚀 Server running on port ${PORT}`);
-      console.log(`⚡ Socket.io initialized`);
-      console.log(`📍 Environment: ${process.env.NODE_ENV}`);
+      logger.info(`🚀 Server running on port ${PORT}`, {
+        environment: process.env.NODE_ENV,
+        port: PORT,
+      });
     });
   } catch (error) {
-    console.error('Failed to start server:', error);
+    logger.error('Failed to start server', { error });
     process.exit(1);
   }
 };
 
 // Graceful shutdown
-process.on('SIGTERM', async () => {
+const gracefulShutdown = async (signal: string) => {
+  logger.info(`${signal} received — shutting down gracefully`);
   await Database.disconnect();
+  await RedisClient.disconnect();
   process.exit(0);
-});
+};
 
-process.on('SIGINT', async () => {
-  await Database.disconnect();
-  process.exit(0);
-});
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 
 startServer();

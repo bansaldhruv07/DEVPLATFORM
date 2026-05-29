@@ -19,37 +19,69 @@ export default function CodeExplainerPage() {
   const [mode, setMode] = useState<'explain' | 'debug'>('explain');
   const [errorMsg, setErrorMsg] = useState('');
 
-  const handleSubmit = async () => {
-    if (!code.trim()) {
-      setError('Please enter some code');
-      return;
-    }
+const handleSubmit = async () => {
+  if (!code.trim()) {
+    setError('Please enter some code');
+    return;
+  }
 
-    if (mode === 'debug' && !errorMsg.trim()) {
-      setError('Please enter the error message');
-      return;
-    }
+  if (mode === 'debug' && !errorMsg.trim()) {
+    setError('Please enter the error message');
+    return;
+  }
 
-    setError('');
-    setIsLoading(true);
-    setExplanation('');
+  setError('');
+  setIsLoading(true);
+  setExplanation('');
 
-    try {
-      let response;
-
-      if (mode === 'explain') {
-        response = await repoAPI.explainCode(code, language);
-        setExplanation(response.data.data.explanation);
-      } else {
-        response = await repoAPI.debugCode(code, errorMsg, language);
-        setExplanation(response.data.data.solution);
-      }
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Request failed. Please try again.');
-    } finally {
+  try {
+    if (mode === 'debug') {
+      // Debug is synchronous
+      const response = await repoAPI.debugCode(code, errorMsg, language);
+      setExplanation(response.data.data.solution);
       setIsLoading(false);
+    } else {
+      // Code explanation is async — poll for result
+      const response = await repoAPI.explainCode(code, language);
+      const { jobId } = response.data.data;
+
+      // Poll every 2 seconds until complete
+      const pollInterval = setInterval(async () => {
+        try {
+          const statusResponse = await repoAPI.getJobStatus(jobId);
+          const { status, result, error: jobError } = statusResponse.data.data;
+
+          if (status === 'completed') {
+            clearInterval(pollInterval);
+            setExplanation(result || '');
+            setIsLoading(false);
+          } else if (status === 'failed') {
+            clearInterval(pollInterval);
+            setError(jobError || 'AI processing failed');
+            setIsLoading(false);
+          }
+          // status === 'pending' or 'processing' — keep polling
+        } catch {
+          clearInterval(pollInterval);
+          setError('Failed to check job status');
+          setIsLoading(false);
+        }
+      }, 2000);
+
+      // Safety timeout after 60 seconds
+      setTimeout(() => {
+        clearInterval(pollInterval);
+        if (isLoading) {
+          setError('Request timed out. Please try again.');
+          setIsLoading(false);
+        }
+      }, 60000);
     }
-  };
+  } catch (err: any) {
+    setError(err.response?.data?.message || 'Request failed');
+    setIsLoading(false);
+  }
+};
 
   const exampleCode = `function debounce(fn, delay) {
   let timer;
