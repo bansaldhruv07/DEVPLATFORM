@@ -34,7 +34,52 @@ export default function RepoAnalyzerPage() {
 
     try {
       const response = await repoAPI.analyze(repoUrl);
-      setResult(response.data.data);
+      const data = response.data.data;
+      setResult(data);
+
+      if (data.jobId) {
+        const jobId = data.jobId;
+        const pollInterval = setInterval(async () => {
+          try {
+            const statusResponse = await repoAPI.getJobStatus(jobId);
+            const { status, result: jobResult, error: jobError } = statusResponse.data.data;
+
+            if (status === 'completed') {
+              clearInterval(pollInterval);
+              setResult((prev) => {
+                if (!prev || prev.jobId !== jobId) return prev;
+                return {
+                  ...prev,
+                  aiAnalysis: jobResult || '',
+                };
+              });
+            } else if (status === 'failed') {
+              clearInterval(pollInterval);
+              setResult((prev) => {
+                if (!prev || prev.jobId !== jobId) return prev;
+                return {
+                  ...prev,
+                  aiAnalysis: `❌ AI analysis failed: ${jobError || 'Unknown error'}`,
+                };
+              });
+            }
+          } catch (err) {
+            clearInterval(pollInterval);
+            setResult((prev) => {
+              if (!prev || prev.jobId !== jobId) return prev;
+              return {
+                ...prev,
+                aiAnalysis: '❌ Failed to check AI analysis job status.',
+              };
+            });
+          }
+        }, 2000);
+
+        // Safety timeout after 60 seconds
+        setTimeout(() => {
+          clearInterval(pollInterval);
+        }, 60000);
+      }
     } catch (err: any) {
       setError(
         err.response?.data?.message || 'Analysis failed. Please try again.'

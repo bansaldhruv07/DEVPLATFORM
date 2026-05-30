@@ -45,4 +45,5 @@ export interface AnalysisResult {
   techStack: TechStack[];
   metrics: RepoMetrics;
   aiAnalysis: string;
+  jobId?: string;
 }
