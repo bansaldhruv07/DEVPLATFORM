@@ -12,6 +12,7 @@ import RedisClient from './config/redis';
 import logger from './config/logger';
 import { requestLogger, errorLogger } from './middleware/requestLogger';
 import { initializeSocket } from './socket/socketServer';
+import analyticsRoutes from './routes/analyticsRoutes';
 
 // Import queues (initializes workers)
 import './queues/aiQueue';
@@ -28,7 +29,24 @@ const PORT = process.env.PORT || 5000;
 
 // Middleware
 app.use(helmet());
-app.use(cors({ origin: process.env.CLIENT_URL, credentials: true }));
+app.use(cors({
+  origin: (origin, callback) => {
+    const allowedOrigins = [
+      process.env.CLIENT_URL,
+      'http://localhost:3000', // Always allow local dev
+    ].filter(Boolean);
+
+    // Allow requests with no origin (mobile apps, curl)
+    if (!origin) return callback(null, true);
+
+    if (allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error(`CORS blocked: ${origin}`));
+    }
+  },
+  credentials: true,
+}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
@@ -52,6 +70,7 @@ app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/users', userRoutes);
 app.use('/api/v1/repos', repoRoutes);
 app.use('/api/v1/tasks', taskRoutes);
+app.use('/api/v1/analytics', analyticsRoutes);
 
 // Error logger (must be AFTER routes)
 app.use(errorLogger);

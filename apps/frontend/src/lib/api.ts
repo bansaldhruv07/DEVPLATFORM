@@ -131,3 +131,7 @@ export const repoAPI = {
   getJobStatus: (jobId: string) =>
     api.get(`/repos/job/${jobId}`),
 };
+
+export const analyticsAPI = {
+  getDashboard: () => api.get('/analytics/dashboard'),
+};

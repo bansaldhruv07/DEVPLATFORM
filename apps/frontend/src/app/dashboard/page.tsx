@@ -33,13 +33,13 @@ const features = [
   badge: 'Live',  
 },
   {
-    icon: '📊',
-    title: 'Analytics',
-    description: 'Track productivity metrics and team performance',
-    href: '/dashboard/analytics',
-    color: 'bg-amber-50 border-amber-200',
-    badge: 'Coming Soon',
-  },
+  icon: '📊',
+  title: 'Analytics',
+  description: 'Track productivity metrics and team performance',
+  href: '/dashboard/analytics',
+  color: 'bg-amber-50 border-amber-200',
+  badge: 'Live',
+},
 ];
 
 export default function DashboardPage() {

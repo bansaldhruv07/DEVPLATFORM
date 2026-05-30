@@ -26,6 +26,22 @@ class Database {
         throw new Error('MONGODB_URI is not defined in environment variables');
       }
 
+      // Handle connection events
+      mongoose.connection.on('error', (err) => {
+        console.error('❌ MongoDB connection error:', err.message || err);
+        this.isConnected = false;
+      });
+
+      mongoose.connection.on('disconnected', () => {
+        console.warn('⚠️ MongoDB disconnected. Attempting to reconnect...');
+        this.isConnected = false;
+      });
+
+      mongoose.connection.on('reconnected', () => {
+        console.log('♻️ MongoDB reconnected');
+        this.isConnected = true;
+      });
+
       try {
         console.log('🔌 Connecting to primary MongoDB...');
         await mongoose.connect(mongoUri, {
@@ -38,6 +54,11 @@ class Database {
         console.log('✅ MongoDB connected successfully to primary database');
       } catch (primaryError: any) {
         console.error('⚠️ Primary MongoDB connection failed:', primaryError.message || primaryError);
+        
+        // In production, do not attempt to fall back to local MongoDB
+        if (process.env.NODE_ENV === 'production') {
+          throw primaryError;
+        }
         
         try {
           console.log('🔄 Disconnecting and resetting Mongoose connection state...');
@@ -57,22 +78,6 @@ class Database {
         this.isConnected = true;
         console.log('✅ Connected successfully to local fallback MongoDB');
       }
-
-      // Handle connection events
-      mongoose.connection.on('error', (err) => {
-        console.error('❌ MongoDB connection error:', err);
-        this.isConnected = false;
-      });
-
-      mongoose.connection.on('disconnected', () => {
-        console.warn('⚠️ MongoDB disconnected. Attempting to reconnect...');
-        this.isConnected = false;
-      });
-
-      mongoose.connection.on('reconnected', () => {
-        console.log('♻️ MongoDB reconnected');
-        this.isConnected = true;
-      });
 
     } catch (error) {
       console.error('💥 MongoDB connection completely failed:', error);
