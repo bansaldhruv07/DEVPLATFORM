@@ -31,19 +31,17 @@ const PORT = process.env.PORT || 5000;
 app.use(helmet());
 app.use(cors({
   origin: (origin, callback) => {
-    const allowedOrigins = [
-      process.env.CLIENT_URL,
-      'http://localhost:3000', // Always allow local dev
-    ].filter(Boolean);
-
-    // Allow requests with no origin (mobile apps, curl)
     if (!origin) return callback(null, true);
 
-    if (allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error(`CORS blocked: ${origin}`));
+    if (
+      origin.includes('vercel.app') ||
+      origin === process.env.CLIENT_URL ||
+      origin === 'http://localhost:3000'
+    ) {
+      return callback(null, true);
     }
+
+    callback(new Error(`CORS blocked: ${origin}`));
   },
   credentials: true,
 }));
