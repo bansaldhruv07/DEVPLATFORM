@@ -15,9 +15,9 @@ export default function Home() {
   useEffect(() => {
     const checkHealth = async () => {
       try {
-        const response = await axios.get(
-          `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/health`
-        );
+        const rawApiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+        const cleanApiUrl = rawApiUrl.replace(/\/+$/, '');
+        const response = await axios.get(`${cleanApiUrl}/health`);
         setHealthStatus(response.data.status === 'ok' ? 'ok' : 'error');
       } catch (error) {
         setHealthStatus('error');

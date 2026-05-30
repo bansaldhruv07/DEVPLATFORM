@@ -4,7 +4,8 @@ import { useEffect, useRef, useState } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { useAuthStore } from '@/store/useAppStore';
 
-const SOCKET_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+const rawApiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+const SOCKET_URL = rawApiUrl.replace(/\/+$/, '');
 
 export const useSocket = () => {
   const socketRef = useRef<Socket | null>(null);
