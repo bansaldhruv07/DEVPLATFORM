@@ -87,7 +87,10 @@ class GitHubService {
         `${this.baseURL}/repos/${owner}/${repo}/stats/commit_activity`,
         { headers: this.headers }
       );
-      return response.data || [];
+      if (response.status === 202 || !Array.isArray(response.data)) {
+        return [];
+      }
+      return response.data;
     } catch (error) {
       console.error('Error fetching commit activity:', error);
       return [];
